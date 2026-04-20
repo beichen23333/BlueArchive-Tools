@@ -1,12 +1,23 @@
-import sqlite3
+import pysqlcipher3.dbapi2 as sqlite3
 
 from lib.structure import DBColumn, DBTable
-
+from utils.config import Config
 
 class TableDatabase:
     def __init__(self, database: str) -> None:
         self.database = database
         self.connection = sqlite3.connect(self.database)
+        if Config.db_password:
+            # 日服文件被加密了，需要使用密钥解密，这里有密钥就用，没有则正常。
+            # 请确保密钥为十六进制
+            cursor = self.connection.cursor()
+            cursor.execute(f"PRAGMA key = \"x'{Config.db_password}'\";")
+
+        try:
+            cursor.execute("SELECT count(*) FROM sqlite_master;")
+            print("数据库解密成功！")
+        except Exception as e:
+            print(f"解密失败，可能是密钥错误或格式不对: {e}")
 
     def __enter__(self) -> "TableDatabase":
         return self

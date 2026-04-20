@@ -4,3 +4,4 @@ class Config:
     is_cn = False
     proxy = None
     retries = 5
+    db_decrypt = True

@@ -16,6 +16,8 @@
 本项目包含并修改了以下仓库的代码，感谢原作者的开源贡献：
 *  [ZM-Kimu/Blue-Archive-Asset-Downloader](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader) (MIT License)
 *  [asfu222/BlueArchiveLocalizationTools](https://github.com/asfu222/BlueArchiveLocalizationTools) (MIT License)
+*  [rr-/pycrcmanip](https://github.com/rr-/pycrcmanip) (MIT License)
+*  [nesrak1/UABEA](https://github.com/nesrak1/UABEA) (MIT License) (CIL制作 Hyper)
 
 ---
 
@@ -45,3 +47,5 @@
 > 详情请参阅原项目协议：
 > * [Blue-Archive-Asset-Downloader LICENSE](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader/blob/main/LICENSE)
 > * [BlueArchiveLocalizationTools LICENSE](https://github.com/asfu222/BlueArchiveLocalizationTools/blob/main/LICENSE)
+> * [pycrcmanip LICENSE](https://github.com/rr-/pycrcmanip/blob/master/LICENSE)
+> * [UABEA LICENSE](https://github.com/nesrak1/UABEA/blob/master/LICENSE)
