@@ -16,9 +16,9 @@ from crcmanip.crc import CRC32
 from crcmanip.algorithm import apply_patch, consume
 
 # ---------------------------------------------------------------------------
-# tools/UABEA/UABEAvalonia
+# UABEA/UABEAvalonia
 # ---------------------------------------------------------------------------
-_UABEA_DIR = path.join(path.dirname(path.dirname(path.abspath(__file__))), "tools", "UABEA")
+_UABEA_DIR = path.join(path.dirname(path.dirname(path.abspath(__file__))), "UABEA")
 _UABEA_BIN = path.join(_UABEA_DIR, "UABEAvalonia")
 
 

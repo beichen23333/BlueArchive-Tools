@@ -6,3 +6,8 @@ output/
 Temp/
 Extracted/
 Download/
+*.bytes
+测试*
+BundlePackingInfo.json
+*Catalog.json
+*.zip

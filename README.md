@@ -21,7 +21,7 @@
 
 ---
 
-## Disclaimer / 免责声明
+## 免责声明
 
 > [!IMPORTANT]
 > **在开始使用本项目前，请务必仔细阅读以下条款：**
@@ -48,4 +48,4 @@
 > * [Blue-Archive-Asset-Downloader LICENSE](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader/blob/main/LICENSE)
 > * [BlueArchiveLocalizationTools LICENSE](https://github.com/asfu222/BlueArchiveLocalizationTools/blob/main/LICENSE)
 > * [pycrcmanip LICENSE](https://github.com/rr-/pycrcmanip/blob/master/LICENSE)
-> * [UABEA LICENSE](https://github.com/nesrak1/UABEA/blob/master/LICENSE)
+> * [UABEA LICENSE](https://github.com/nesrak1/UABEA/blob/master/license)

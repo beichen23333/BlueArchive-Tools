@@ -203,15 +203,6 @@ def encrypt_string(value: str, key: bytes = b"") -> str:
         b64_encoded += "=" * (4 - missing_padding)
 
     return b64_encoded
-'''
-def encrypt_string(value: str, key: bytes) -> str | bytes:
-    """Encrypt a string using XOR and base64 encoding."""
-    if not value or len(value) < 8:
-        return value.encode() if value else b""
-
-    raw = value.encode("utf-16le")
-    return b64encode(xor(raw, key)).decode()
-'''
 
 class MersenneTwister:
     # Constants for the Mersenne Twister algorithm
