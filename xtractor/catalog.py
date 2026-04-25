@@ -254,3 +254,4 @@ class MXCatalog:
                 } for k, v in self.UpdatePacks.items()
             }
         }
+

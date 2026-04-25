@@ -8,6 +8,8 @@ Extracted/
 Download/
 *.bytes
 测试*
+测试/
 BundlePackingInfo.json
-*Catalog.json
+*Catalog*.json
 *.zip
+.env
