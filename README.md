@@ -17,7 +17,8 @@
 *  [ZM-Kimu/Blue-Archive-Asset-Downloader](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader) (MIT License)
 *  [asfu222/BlueArchiveLocalizationTools](https://github.com/asfu222/BlueArchiveLocalizationTools) (MIT License)
 *  [rr-/pycrcmanip](https://github.com/rr-/pycrcmanip) (MIT License)
-*  [nesrak1/UABEA](https://github.com/nesrak1/UABEA) (MIT License) (CIL制作 Hyper)
+*  [nesrak1/UABEA](https://github.com/nesrak1/UABEA) (MIT License) (CIL by Hyper)
+*  [Youjose/PyCriCodecs](https://github.com/Youjose/PyCriCodecs) (无 License)
 
 ---
 

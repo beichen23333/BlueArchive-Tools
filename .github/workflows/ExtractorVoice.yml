@@ -1,0 +1,53 @@
+name: Extractor Voice
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  Extractor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install requirements
+        run: |
+          sudo apt-get install -y build-essential libssl-dev sqlcipher libsqlcipher-dev ffmpeg
+          pip install -r requirements.txt
+          python PyCriCodecs_setup.py install
+
+      - name: Configure SSH Access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+
+      - name: Login
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Prepare Voice
+        run: |
+          git clone git@github.com:beichen23333/BA-VoiceCN.git Voice
+
+      - name: Run Extractor
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python extractor_voice.py
+
+      - name: Push Voice.json
+        run: |
+          git add Voice.json
+          git commit -m "提交Voice.json"
+          git push origin main

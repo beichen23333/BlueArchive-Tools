@@ -17,6 +17,8 @@ if __name__ == "__main__":
     args.output_path.mkdir(parents=True, exist_ok=True)
 
     Config.server = args.server
+
+    # 密钥自己搞，由服务器下发，可解析getway或hook获取
     if args.db_key:
         Config.db_password = args.db_key
 

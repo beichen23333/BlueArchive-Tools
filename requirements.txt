@@ -1,0 +1,14 @@
+setuptools
+flatbuffers
+python-dotenv
+pycryptodome
+xxhash
+requests
+cloudscraper
+pysqlcipher3
+unitypy
+pillow
+click
+tqdm
+pydub
+pyzipper

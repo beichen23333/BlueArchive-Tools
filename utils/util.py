@@ -9,6 +9,7 @@ from UnityPy.files.File import ObjectReader
 from lib.console import ProgressBar, notice
 import os
 import subprocess
+import pyzipper
 
 class TemplateString:
     """
@@ -226,6 +227,81 @@ class ZipUtils:
         if progress_bar:
             bar.stop()
         return extract_list
+
+    @staticmethod
+    def create_zip(
+        file_paths: str | list[str],
+        dest_zip: str,
+        *,
+        keywords: list[str] | None = None,
+        base_dir: str = "",
+        compression: int = pyzipper.ZIP_DEFLATED,
+        password: bytes = bytes(),
+        progress_bar: bool = False,
+        verbose: bool = False,
+    ) -> bool:
+        """Compresses specific files into a zip archive.
+
+        Args:
+            file_paths (str | list[str]): Path(s) to the files or directories to compress.
+            dest_zip (str): Path where the resulting zip file will be saved.
+            keywords (list[str], optional): List of keywords to filter files for compression. Defaults to None.
+            base_dir (str, optional): Base directory for relative paths in the zip. Defaults to "".
+            compression (int, optional): Compression method. Defaults to ZIP_DEFLATED.
+            password (bytes, optional): Password for the zip file. Defaults to bytes().
+            progress_bar (bool, optional): Create a progress bar during compression. Defaults to True.
+            verbose (bool, optional): Output verbose debugging logs.
+
+        Returns:
+            bool: True if compression was successful.
+        """
+        if progress_bar:
+            print(f"Compressing files to {dest_zip}...")
+
+        if verbose:
+            print(f"[VERBOSE] Target ZIP: {dest_zip}")
+            print(f"[VERBOSE] Password: {password.decode() if password else 'None'}")
+            print(f"[VERBOSE] Base Directory: {base_dir}")
+
+        input_paths = [file_paths] if isinstance(file_paths, str) else file_paths
+        files_to_add = []
+
+        for path in input_paths:
+            full_path = os.path.join(base_dir, path)
+            if os.path.isfile(full_path):
+                files_to_add.append(full_path)
+            elif os.path.isdir(full_path):
+                files_to_add.extend(
+                    os.path.join(root, file) 
+                    for root, _, files in os.walk(full_path) 
+                    for file in files
+                )
+
+        if keywords:
+            files_to_add = [f for f in files_to_add if any(k in f for k in keywords)]
+
+        if not files_to_add:
+            return False
+
+        bar = ProgressBar(len(files_to_add), "Compress...", "items") if progress_bar else None
+
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(dest_zip)), exist_ok=True)
+            with pyzipper.AESZipFile(dest_zip, "w", compression=compression, encryption=pyzipper.WZ_AES) as z:
+                if password:
+                    z.setpassword(password)
+                for file in files_to_add:
+                    arcname = os.path.relpath(file, base_dir) if base_dir else os.path.basename(file)
+                    z.write(file, arcname)
+                    if bar: bar.increase()
+            
+            if bar: bar.stop()
+            return True
+        except Exception as e:
+            notice(f"Error creating zip '{dest_zip}': {e}")
+            if bar: bar.stop()
+            return False
+
 
     # Used to parse the area where the EOCD (End of Central Directory) of the compressed file's central directory is located.
     @staticmethod

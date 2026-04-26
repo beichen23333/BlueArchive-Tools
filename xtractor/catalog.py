@@ -2,11 +2,9 @@ import io
 import struct
 import json
 
-"""
-使用例子
-catalog = MXCatalogReader.parse(data,"Media")
-catalog.MediaCatalog()
-"""
+#使用例子
+#catalog = MXCatalogReader.parse(data,"Media")
+#catalog.MediaCatalog()
 
 class MXCatalogReader:
     @staticmethod
@@ -40,24 +38,24 @@ class MXCatalogReader:
         return struct.unpack('<q', dis.read(8))[0]
 
     @staticmethod
-    def parse(bytesData, Type):
+    def parse_jp(bytesData, Type):
         dis = io.BytesIO(bytesData)
         dis.read(1)
-        catalog = MXCatalog()
+        catalog = JPMXCatalog()
         if Type == "Table":
-            catalog.Table = MXCatalogReader.readTableBundles(dis)
-            catalog.TablePack = MXCatalogReader.readTablePatchPacks(dis)
+            catalog.Table = MXCatalogReader.readTableBundles_jp(dis)
+            catalog.TablePack = MXCatalogReader.readTablePatchPacks_jp(dis)
         elif Type == "Media":
-            catalog.Table = MXCatalogReader.readMedia(dis)
+            catalog.Table = MXCatalogReader.readMedia_jp(dis)
         elif Type == "Bundle":
             catalog.Milestone = MXCatalogReader.readString(dis)
             catalog.PatchVersion = MXCatalogReader.readI32(dis)
-            catalog.FullPatchPacks = MXCatalogReader.readBundlePatchPack(dis)
-            catalog.UpdatePacks = MXCatalogReader.readBundlePatchPack(dis)
+            catalog.FullPatchPacks = MXCatalogReader.readBundlePatchPack_jp(dis)
+            catalog.UpdatePacks = MXCatalogReader.readBundlePatchPack_jp(dis)
         return catalog
 
     @staticmethod
-    def readTableBundles(dis):
+    def readTableBundles_jp(dis):
         # Table包结构
         count = MXCatalogReader.readI32(dis)
         result = {}
@@ -77,7 +75,7 @@ class MXCatalogReader:
         return result
 
     @staticmethod
-    def readTablePatchPacks(dis):
+    def readTablePatchPacks_jp(dis):
         # TablePack包结构
         count = MXCatalogReader.readI32(dis)
         result = {}
@@ -108,7 +106,7 @@ class MXCatalogReader:
         return result
 
     @staticmethod
-    def readMedia(dis):
+    def readMedia_jp(dis):
         # Media包结构
         count = MXCatalogReader.readI32(dis)
         result = {}
@@ -128,7 +126,7 @@ class MXCatalogReader:
         return result
 
     @staticmethod
-    def readBundlePatchPack(dis):
+    def readBundlePatchPack_jp(dis):
         # Bundle里面的两个结构相同
         count = MXCatalogReader.readI32(dis)
         result = {}
@@ -157,7 +155,7 @@ class MXCatalogReader:
             result[item["PackName"]] = item
         return result
 
-class MXCatalog:
+class JPMXCatalog:
     def TableCatalog(self):
         return {
             "Table": {
@@ -255,3 +253,37 @@ class MXCatalog:
             }
         }
 
+class CNMXCatalog:
+    def __init__(self, raw_data):
+        self.raw_data = raw_data
+        self.media_type = {
+            0: "none",
+            1: "ogg",
+            2: "mp4",
+            3: "jpg",
+            4: "png",
+            5: "acb",
+            6: "awb"
+        }
+
+    def parse_media_manifest(self):
+        lines = self.raw_data.strip().split('\n')
+        result = {}
+        for line in lines:
+            if not line.strip():
+                continue
+
+            parts = [p.strip() for p in line.rstrip(',').split(',')]
+
+            if len(parts) >= 4:
+                # 为确保Key值唯一，故此进行文件后缀拼接
+                raw_key = parts[0]
+                m_type_value = int(parts[2])
+                media_type = self.media_type.get(m_type_value, str(m_type_value))
+                unique_key = f"{raw_key}.{media_type}"            
+                result[unique_key] = {
+                    "Hash": parts[1],
+                    "MediaType": media_type,
+                    "Size": int(parts[3])
+                }
+        return json.dumps(result, indent=4, ensure_ascii=False)
