@@ -3,6 +3,7 @@
 ![License](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)
 ![Status](https://img.shields.io/badge/Status-Developing-orange.svg)
 ![Game](https://img.shields.io/badge/Game-Blue%20Archive-cyan.svg)
+[![Extractor Voice](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/ExtractorVoice.yml/badge.svg)](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/ExtractorVoice.yml)
 
 **蔚蓝档案汉化工具集** —— 在不触及敏感内容的情况下，开源部分核心逻辑，为 BA 本地化汉化提供技术支持。
 
