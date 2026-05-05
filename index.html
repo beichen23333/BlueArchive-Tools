@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BA Resource Downloader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --line-color: #d1d5da;
+            --hover-bg: #f1f8ff;
+            --select-bg: #e6f1ff;
+            --text-main: #24292e;
+            --accent: #0366d6;
+        }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #fff; color: var(--text-main); margin: 20px; line-height: 1.5; }
+        .tree-container { max-width: 1000px; margin: 0 auto; border: 1px solid #e1e4e8; border-radius: 6px; padding: 20px; background: #fafbfc; }
+        .tree-item { position: relative; padding-left: 24px; }
+        .tree-item::before {
+            content: "";
+            position: absolute; left: 8px; top: -10px; bottom: 0;
+            border-left: 1px solid var(--line-color);
+        }
+        .tree-item:last-child::before { height: 24px; }
+        .tree-item::after {
+            content: "";
+            position: absolute; left: 8px; top: 14px; width: 12px;
+            border-top: 1px solid var(--line-color);
+        }
+        .node-row {
+            display: flex; align-items: center; padding: 6px 10px;
+            cursor: pointer; border-radius: 4px; transition: 0.1s;
+            user-select: none; margin: 2px 0;
+        }
+        .node-row:hover { background-color: var(--hover-bg); }
+        .node-row.selected { background-color: var(--select-bg); outline: 1px solid var(--accent); }
+        .icon { width: 22px; margin-right: 6px; text-align: center; display: inline-block; }
+        .folder-arrow { 
+            font-size: 10px; transition: transform 0.2s; display: inline-block; 
+            margin-right: 4px; color: #6a737d;
+        }
+        .children-group { display: none; }
+        .expanded > .children-group { display: block; }
+        .expanded > .node-row .folder-arrow { transform: rotate(90deg); }
+        .more-trigger {
+            margin: 4px 0 8px 30px; color: var(--accent); cursor: pointer;
+            font-size: 13px; text-decoration: underline;
+        }
+        #download-btn {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #2ea44f; color: white; border: none;
+            padding: 16px 28px; border-radius: 50px; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer;
+            display: none; z-index: 1000; font-size: 16px;
+        }
+        .loading-info { text-align: center; color: #586069; padding: 40px; }
+    </style>
+</head>
+
+<body>
+
+    <div class="tree-container">
+        <h2 style="margin: 0 0 20px 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">提取</h2>
+        <div id="root-box">
+            <div class="loading-info">正在获取仓库数据...</div>
+        </div>
+    </div>
+
+    <button id="download-btn" onclick="packFiles()">下载已选资源 (<span id="count">0</span>)</button>
+
+    <script>
+        const OWNER = "beichen23333";
+        const PROJECTS = [
+            { name: "FlatData", repo: "BA-FlatData", branches: ["main", "JP", "GL", "CN"] },
+            { name: "TableBundles", repo: "BA-TableBundles", branches: ["main", "JP", "GL", "CN"] },
+            { name: "Voice", repo: "BA-VoiceCN", branches: ["main"], folderName: "中配" },
+            { name: "PC SRC", repo: "BA-PC-SRC", branches: ["main"] }
+        ];
+        
+        let selectedSet = new Set();
+        let longPressTimer;
+        
+        async function init() {
+            const rootBox = document.getElementById('root-box');
+            try {
+                rootBox.innerHTML = '';
+                for (const proj of PROJECTS) {
+                    const projNode = await buildProjectNode(proj);
+                    renderNode(projNode, rootBox, false);
+                }
+            } catch (e) {
+                rootBox.innerHTML = `<div style="color:red">加载失败: ${e.message}</div>`;
+            }
+        }
+        
+        async function buildProjectNode(proj) {
+            const projRoot = { name: proj.name, type: "tree", children: [] };
+            
+            const branchTrees = await Promise.all(proj.branches.map(async (br) => {
+                const resp = await fetch(`https://api.github.com/repos/${OWNER}/${proj.repo}/git/trees/${br}?recursive=1`);
+                const data = await resp.json();
+                return { branch: br, tree: data.tree || [] };
+            }));
+        
+            branchTrees.forEach(({ branch, tree }) => {
+                let currentLevel;
+                
+                if (branch === "main" && !proj.folderName) {
+                    currentLevel = projRoot.children;
+                } else {
+                    const dirName = proj.folderName || `${branch}_${proj.name}`;
+                    const branchDir = { 
+                        name: dirName, 
+                        type: "tree", 
+                        children: [], 
+                        repo: proj.repo,
+                        branch: branch 
+                    };
+                    projRoot.children.push(branchDir);
+                    currentLevel = branchDir.children;
+                }
+                
+                tree.forEach(item => {
+                    if (item.path === "README.md" || item.path === ".gitattributes" || item.type === "tree") return;
+                    
+                    const parts = item.path.split('/');
+                    let targetDir = currentLevel;
+                    
+                    parts.forEach((part, index) => {
+                        const isLast = index === parts.length - 1;
+                        let existing = targetDir.find(c => c.name === part);
+                        
+                        if (!existing) {
+                            existing = {
+                                name: part,
+                                type: isLast ? "blob" : "tree",
+                                children: isLast ? null : [],
+                                path: item.path,
+                                repo: proj.repo,
+                                branch: branch
+                            };
+                            targetDir.push(existing);
+                        }
+                        if (!isLast) targetDir = existing.children;
+                    });
+                });
+            });
+        
+            return projRoot;
+        }
+        
+        function renderNode(node, container, defaultExpand = false) {
+            const itemWrap = document.createElement('div');
+            itemWrap.className = 'tree-item' + (defaultExpand ? ' expanded' : '');
+            const row = document.createElement('div');
+            row.className = 'node-row';
+            const isDir = node.type === "tree";
+            
+            row.innerHTML = `
+                <span class="icon">${isDir ? '<span class="folder-arrow">▶</span> 📂' : '📄'}</span>
+                <span class="name">${node.name}</span>
+            `;
+        
+            const handleStart = () => { longPressTimer = setTimeout(() => toggleSelect(row, node), 600); };
+            const handleEnd = () => clearTimeout(longPressTimer);
+            row.addEventListener('mousedown', handleStart);
+            row.addEventListener('mouseup', handleEnd);
+            row.addEventListener('touchstart', handleStart);
+            row.addEventListener('touchend', handleEnd);
+        
+            row.onclick = () => {
+                if (isDir) { itemWrap.classList.toggle('expanded'); } 
+                else { toggleSelect(row, node); }
+            };
+        
+            itemWrap.appendChild(row);
+        
+            if (isDir) {
+                const childGroup = document.createElement('div');
+                childGroup.className = 'children-group';
+                const limit = 10;
+                const children = node.children || [];
+                const visible = children.slice(0, limit);
+                const hidden = children.slice(limit);
+        
+                visible.forEach(child => renderNode(child, childGroup, false));
+        
+                if (hidden.length > 0) {
+                    const more = document.createElement('div');
+                    more.className = 'more-trigger';
+                    more.innerText = `点击查看更多文件 (${hidden.length} 个)...`;
+                    more.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm(`即将展开 ${hidden.length} 个文件，这可能导致您的设备出现卡顿，您确定吗？`)) {
+                            hidden.forEach(child => renderNode(child, childGroup, false));
+                            more.remove();
+                        }
+                    };
+                    childGroup.appendChild(more);
+                }
+                itemWrap.appendChild(childGroup);
+            }
+            container.appendChild(itemWrap);
+        }
+        
+        function toggleSelect(row, node) {
+            if (node.type === 'tree') return;
+            const id = `${node.repo}|${node.branch}|${node.path}`;
+            if (selectedSet.has(id)) {
+                selectedSet.delete(id);
+                row.classList.remove('selected');
+            } else {
+                selectedSet.add(id);
+                row.classList.add('selected');
+            }
+            const btn = document.getElementById('download-btn');
+            btn.style.display = selectedSet.size > 0 ? 'block' : 'none';
+            document.getElementById('count').innerText = selectedSet.size;
+        }
+        
+        async function packFiles() {
+            const zip = new JSZip();
+            const btn = document.getElementById('download-btn');
+            btn.disabled = true;
+            btn.innerText = "正在打包...";
+        
+            for (let id of selectedSet) {
+                const [repo, branch, path] = id.split('|');
+                const rawUrl = `https://raw.githubusercontent.com/${OWNER}/${repo}/${branch}/${path}`;
+                try {
+                    let response = await fetch(rawUrl);
+                    let blob = await response.blob();
+                    
+                    if (blob.size < 600) {
+                        const text = await blob.text();
+                        if (text.includes("version https://git-lfs.github.com")) {
+                            const lfsUrl = `https://cdn.jsdelivr.net/gh/${OWNER}/${repo}@${branch}/${path}`;
+                            const lfsRes = await fetch(lfsUrl);
+                            if (lfsRes.ok) {
+                                blob = await lfsRes.blob();
+                            } else {
+                                const githubLfsUrl = `https://media.githubusercontent.com/media/${OWNER}/${repo}/${branch}/${path}`;
+                                const githubLfsRes = await fetch(githubLfsUrl);
+                                if (githubLfsRes.ok) blob = await githubLfsRes.blob();
+                            }
+                        }
+                    }
+                    zip.file(`${repo}_${branch}/${path}`, blob);
+                } catch (e) { 
+                    console.error(`下载失败: ${path}`, e); 
+                }
+            }
+        
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `BA_Resources_${Date.now()}.zip`;
+            link.click();
+            btn.disabled = false;
+            btn.innerText = `下载已选资源 (${selectedSet.size})`;
+        }
+        init();
+    </script>
+</body>
+
+</html>
