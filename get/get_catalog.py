@@ -19,7 +19,7 @@ if __name__ == "__main__":
     args = parse_args()
     Config.server = args.server
 
-    dotenv.load_dotenv(f"BA_{Config.server}.env")
+    dotenv.load_dotenv(f"other/BA_{Config.server}.env")
     base_url = os.getenv('AddressableCatalogUrl')
 
     download_url = ""
@@ -84,8 +84,7 @@ if __name__ == "__main__":
         FileDownloader(url=download_url).save_file(f"Download/{input_file}")
 
         if Config.server != "CN":
-            CatalogMemoryPack_obj = CatalogMemoryPack()
-            CatalogMemoryPack_obj.get_catalog_memory_pack("Temp")
+            CatalogMemoryPack_obj = CatalogMemoryPack(install_dir = "tools")
 
             abs_input_path = os.path.abspath(f"Download/{input_file}")
             abs_output_path = os.path.abspath(input_file.replace(".bytes", ".json"))

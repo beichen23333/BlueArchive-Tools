@@ -99,7 +99,7 @@ jobs:
         if: steps.update.outputs.detected == 'true'
         run: |
           git pull
-          git add BA_${{ matrix.server }}.env
+          git add other/BA_${{ matrix.server }}.env
           git commit -m "${{ matrix.server }}服务器存在变动。"
           git push
 
@@ -107,8 +107,8 @@ jobs:
         if: steps.update.outputs.major == 'true' && matrix.server != 'JPPC'
         id: get_version
         run: |
-          chmod +x ./get_version.sh
-          VERSION=$(./get_version.sh ${{ matrix.server }} false)
+          chmod +x ./other/get_version.sh
+          VERSION=$(./other/get_version.sh ${{ matrix.server }} false)
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Compress Data
@@ -160,7 +160,7 @@ jobs:
       - name: Extractor Workflows
         if: steps.update.outputs.detected == 'true' && matrix.server != 'JPPC'
         run: |
-          TYPES=("Table" "Media" "Bundle")
+          TYPES=("Table")
           if [ "${{ matrix.server }}" == "CN" ]; then
             TYPES+=("voice")
           fi

@@ -75,13 +75,13 @@ jobs:
 
       - name: Get Catalog
         run: |
-          python get_catalog.py ${{ github.event.client_payload.server }} ${{ github.event.action }} ${{ matrix.platform }}
+          python -m get.get_catalog ${{ github.event.client_payload.server }} ${{ github.event.action }} ${{ matrix.platform }}
 
       - name: Get Version
         id: version
         run: |
-          chmod +x get_version.sh
-          VERSION=$(./get_version.sh ${{ github.event.client_payload.server }} true TableVersion)
+          chmod +x other/get_version.sh
+          VERSION=$(./other/get_version.sh ${{ github.event.client_payload.server }} true TableVersion)
           echo "full_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Execute Table Logic
@@ -89,7 +89,7 @@ jobs:
         run: |
           git clone --depth 1 git@github.com:beichen23333/BA-Text.git BA-Text
  
-          python get_files.py ${{ github.event.client_payload.server }} Table ${{ matrix.platform }} -f ExcelDB.db Excel.zip
+          python -m get.get_files ${{ github.event.client_payload.server }} Table ${{ matrix.platform }} -f ExcelDB.db Excel.zip
 
           SERVER="${{ github.event.client_payload.server }}"
           if [ "$SERVER" = "CN" ]; then

@@ -18,7 +18,7 @@ if __name__ == "__main__":
     args = parse_args()
     Config.server = args.server
 
-    env_file = f"BA_{Config.server}.env"
+    env_file = f"other/BA_{Config.server}.env"
     load_dotenv(env_file)
     
     local_version = os.getenv("GameVersion")

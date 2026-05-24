@@ -17,7 +17,7 @@ if __name__ == "__main__":
     args = parse_args()
     Config.server = args.server
 
-    dotenv.load_dotenv(f"BA_{Config.server}.env")
+    dotenv.load_dotenv(f"other/BA_{Config.server}.env")
     base_url = os.getenv('AddressableCatalogUrl')
 
     os.makedirs("Download_Temp", exist_ok=True)

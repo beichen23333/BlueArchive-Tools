@@ -12,12 +12,12 @@ from lib.encryption import calculate_crc, zip_password
 from PyCriCodecs import *
 from utils.util import ZipUtils
 
-load_dotenv("BA_CN.env")
+load_dotenv("other/BA_CN.env")
 
 base_url = os.getenv("AddressableCatalogUrl")
 media_ver = os.getenv("MediaVersion")
 
-voice_json_path = "Voice.json"
+voice_json_path = "other/Voice.json"
 
 # 初始化
 if not os.path.exists(voice_json_path):

@@ -54,7 +54,7 @@ jobs:
 
       - name: Push Voice.json
         run: |
-          git add Voice.json
+          git add other/Voice.json
           if ! git diff-index --quiet HEAD; then
               git commit -m "提交Voice.json"
               git push

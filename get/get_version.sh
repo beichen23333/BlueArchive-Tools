@@ -3,7 +3,7 @@
 server=$1
 is_full_name=$2
 target_version_key=$3
-env_file="BA_${server}.env"
+env_file="other/BA_${server}.env"
 
 if [ -f "$env_file" ]; then
     export $(grep -v '^#' "$env_file" | xargs)

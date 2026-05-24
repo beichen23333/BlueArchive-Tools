@@ -5,25 +5,12 @@ from xtractor.catalog import CatalogMemoryPack
 from lib.console import notice
 
 def update_media_catalog():
-    # 先解析MediaCatalog
-    CatalogMemoryPack().get_catalog_memory_pack("Temp")
-    success, error_msg = CatalogMemoryPack().run(
-        server="JP",
-        mode="deserialize",
-        catalog_type="Media",
-        input_path="Download/MediaCatalog.bytes",
-        output_path="MediaCatalog.json"
-    )
-    if not success:
-        print(f"执行出错：{error_msg}")
-        return
-    
-    notice("MediaCatalog解析完成。")
+    CatalogMemoryPack_obj = CatalogMemoryPack(install_dir = "tools")
 
     with open("MediaCatalog.json", "r", encoding="utf-8") as f:
         media_data = json.load(f)
 
-    with open("Voice.json", "r", encoding="utf-8") as f:
+    with open("other/Voice.json", "r", encoding="utf-8") as f:
         voice_data = json.load(f)
 
     table = media_data.get("Table", {})
@@ -57,7 +44,7 @@ def update_media_catalog():
     
     notice("MediaCatalog 更新完成。")
 
-    success, error_msg = CatalogMemoryPack().run(
+    success, error_msg = CatalogMemoryPack_obj.run(
         server="JP",
         mode="serialize",
         catalog_type="Media",
@@ -80,7 +67,7 @@ def update_voice_excel(voice_excel_path, scenario_script_path):
     with open(scenario_script_path, "r", encoding="utf-8") as f:
         scenario_list = json.load(f)
 
-    with open("Voice.json", "r", encoding="utf-8") as f:
+    with open("other/Voice.json", "r", encoding="utf-8") as f:
         voice_data = json.load(f)
 
     existing_ids = {item["Id"] for item in excel_list}
