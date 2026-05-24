@@ -1,14 +1,19 @@
+import os
+import subprocess
+import re
+import tempfile
+import stat
+import platform
+
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Generator, Iterable, Literal, Protocol
+from typing import Any, Callable, Generator, Iterable, Literal, Protocol, Tuple
 from queue import Queue
 from threading import Thread, Lock, Event
 from time import sleep
 from keyword import kwlist
 from zipfile import ZipFile, ZIP_DEFLATED
 from lib.console import ProgressBar, notice
-import os
-import subprocess
-import re
+from lib.downloader import FileDownloader
 
 class TemplateString:
     """
@@ -482,3 +487,50 @@ class AsarUtils:
         if not success:
             print(f"打包 ASAR 失败: {error}")
         return success
+
+class ToolManager:
+    def __init__(self, install_dir: str):
+        self.install_dir = install_dir
+        self.binary_name = "BlueArchiveTools.CLI"
+
+    @classmethod
+    def get_platform_identifier(cls) -> Tuple[str, str]:
+        os_map = {
+            "linux": "linux",
+            "darwin": "osx",
+            "windows": "win"
+        }
+        arch_map = {
+            "x86_64": "x64",
+            "amd64": "x64",
+            "arm64": "arm64",
+            "aarch64": "arm64"
+        }
+
+        os_name = os_map.get(platform.system().lower())
+        arch = arch_map.get(platform.machine().lower())
+
+        if not os_name or not arch:
+            raise RuntimeError(f"Unsupported OS or architecture: {platform.system()} {platform.machine()}")
+
+        return f"{os_name}-{arch}", os_name
+
+    def ensure_tool(self) -> str:
+        platform_id, os_name = self.get_platform_identifier()
+        
+        if not os.path.exists(self.install_dir):
+            os.makedirs(self.install_dir, exist_ok=True)
+            zip_url = f"https://github.com/beichen23333/BlueArchive-Tools-CLI/releases/latest/download/BlueArchiveTools.{platform_id}.zip"
+            zip_path = os.path.join(self.install_dir, "tools.zip")
+
+            FileDownloader(zip_url).save_file(zip_path)
+            ZipUtils.extract_zip(zip_path, self.install_dir)
+            os.remove(zip_path)
+
+        binary_path = os.path.abspath(os.path.join(self.install_dir, self.binary_name))
+        if os_name == "win":
+            binary_path += ".exe"
+        else:
+            if not os.access(binary_path, os.X_OK):
+                os.chmod(binary_path, os.stat(binary_path).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+        return binary_path

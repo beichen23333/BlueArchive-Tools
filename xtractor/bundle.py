@@ -15,50 +15,21 @@ from typing import Any, Literal, List, Optional, Union
 from PIL import Image
 from lib.console import ProgressBar
 from lib.downloader import FileDownloader
-from lib.dumper import get_platform_identifier
 from crcmanip.crc import CRC32
 from crcmanip.algorithm import apply_patch, consume
-from utils.util import ZipUtils
+from utils.util import ZipUtils, ToolManager
 
-# ---------------------------------------------------------------------------
-# UABEA/UABEAvalonia
-# ---------------------------------------------------------------------------
-_UABEA_DIR = path.join(path.dirname(path.dirname(path.abspath(__file__))), "UABEA")
-_UABEA_BIN = path.join(_UABEA_DIR, "UABEAvalonia.exe" if platform.system().lower() == "windows" else "UABEAvalonia")
-
-class BundleExtractor:
-    UABEA_CLI: str = _UABEA_BIN
-
+class BundleExtractor(ToolManager):
     MAIN_EXTRACT_TYPES = [
         "Texture2D", "Sprite", "AudioClip", "Font", "TextAsset",
         "Mesh", "VideoClip", "MonoBehaviour", "Shader",
     ]
 
-    def __init__(self, EXTRACT_DIR: str = "output") -> None:
+    def __init__(self, install_dir: str = "tools", EXTRACT_DIR: str = "output") -> None:
+        super().__init__(install_dir)
+        self.bin_path = self.ensure_tool()
         self.BUNDLE_EXTRACT_FOLDER = EXTRACT_DIR
-        self._ensure_uabea_executable()
-
-    # ------------------------------------------------------------------
-    # UABEA CLI 基础设施
-    # ------------------------------------------------------------------
-
-    def _ensure_uabea_executable(self) -> None:
-        if not path.exists(self.UABEA_CLI):
-            # 确定当前操作系统
-            platform_id, os_name = get_platform_identifier()
-            uabea_zip_url = f"https://github.com/beichen23333/UABEA/releases/latest/download/uabea-{platform_id}.zip"
-
-            with tempfile.TemporaryDirectory() as tmp_dir:
-                zip_path = path.join(tmp_dir, "uabea.zip")
-                FileDownloader(uabea_zip_url).save_file(zip_path)
-                # 解压到 _UABEA_DIR
-                ZipUtils.extract_zip(zip_path, _UABEA_DIR)
-                os.remove(zip_path)
-
-        # 检查并设置执行权限
-        if path.exists(self.UABEA_CLI) and not os.access(self.UABEA_CLI, os.X_OK):
-            os.chmod(self.UABEA_CLI,
-                     os.stat(self.UABEA_CLI).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+        self.install_dir = install_dir
 
     def _run_uabea(self, args: List[str]) -> subprocess.CompletedProcess:
         """
@@ -67,7 +38,7 @@ class BundleExtractor:
         cwd 保持为 UABEA 二进制目录，以确保 TexturePlugin.dll 等插件能被正确加载。
         """
         # 将路径参数自动转为绝对路径
-        abs_args: List[str] = []
+        abs_args: List[str] = ["uabea"]
         path_flags = {"-f", "-d", "-o", "-i", "-b", "-a"}
         i = 0
         while i < len(args):
@@ -77,9 +48,9 @@ class BundleExtractor:
                 abs_args.append(os.path.abspath(args[i]))
             i += 1
 
-        cmd = [self.UABEA_CLI] + abs_args
+        cmd = [self.bin_path] + abs_args
         try:
-            return subprocess.run(cmd, capture_output=True, text=True, cwd=_UABEA_DIR)
+            return subprocess.run(cmd, capture_output=True, text=True)
         except Exception as e:
             return subprocess.CompletedProcess(cmd, returncode=-1, stdout="", stderr=str(e))
 
@@ -123,61 +94,45 @@ class BundleExtractor:
                 })
         return assets
 
-    # ------------------------------------------------------------------
-    # 兼容层：_MockReadData / _MockObj（保持调用方不变）
-    # ------------------------------------------------------------------
-
     class _MockReadData:
         """模拟 UnityPy obj.read() 的返回对象。"""
         def __init__(self, asset_info: dict, raw_bytes: Optional[bytes] = None) -> None:
             self._info = asset_info
             self.m_Name: str = asset_info.get("name", "")
             self._raw = raw_bytes
-            # UABEA raw 导出的 TextAsset 包含 Unity 序列化头部：
-            #   int32  m_Name 长度
-            #   char[] m_Name
-            #   padding (对齐到 4 字节)
-            #   int32  m_Script 长度
-            #   byte[] m_Script 实际内容
-            # 需要剥离头部，只保留 m_Script 数据，与 UnityPy 行为一致。
             if raw_bytes and asset_info.get("type") == "TextAsset":
                 self.m_Script = self._parse_textasset_raw(raw_bytes)
             else:
-                self.m_Script: str = (
-                    raw_bytes.decode("utf-8", "surrogateescape") if raw_bytes else ""
-                )
+                try:
+                    self.m_Script: str = raw_bytes.decode("utf-8") if raw_bytes else ""
+                except UnicodeDecodeError:
+                    self.m_Script = raw_bytes if raw_bytes else b""
             self.bundleVersion: str = ""
 
         @staticmethod
-        def _parse_textasset_raw(raw: bytes) -> str:
+        def _parse_textasset_raw(raw: bytes) -> Union[str, bytes]:
             """从 UABEA raw 导出的 TextAsset 二进制中提取 m_Script 内容。"""
             import struct
             try:
                 if len(raw) < 4:
-                    return raw.decode("utf-8", "surrogateescape")
-                # 读取 m_Name 长度
+                    return raw
                 name_len = struct.unpack_from("<i", raw, 0)[0]
-                # 合理性检查：名称长度应在 0~1024 之间
                 if not (0 <= name_len <= 1024) or 4 + name_len > len(raw):
-                    return raw.decode("utf-8", "surrogateescape")
-                # 跳过 m_Name + 对齐填充
-                offset = 4 + name_len
-                offset = (offset + 3) & ~3  # 对齐到 4 字节边界
-                # 读取 m_Script 长度
+                    return raw
+                offset = (4 + name_len + 3) & ~3
                 if offset + 4 > len(raw):
-                    return raw.decode("utf-8", "surrogateescape")
+                    return raw
                 script_len = struct.unpack_from("<i", raw, offset)[0]
                 offset += 4
                 if not (0 <= script_len <= len(raw) - offset):
-                    return raw.decode("utf-8", "surrogateescape")
-                # 提取 m_Script 数据
+                    return raw
                 script_bytes = raw[offset:offset + script_len]
-                return script_bytes.decode("utf-8", "surrogateescape")
+                try:
+                    return script_bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    return script_bytes
             except Exception:
-                return raw.decode("utf-8", "surrogateescape")
-
-        def __getattr__(self, item: str) -> Any:
-            return ""
+                return raw
 
     class _MockObj:
         """模拟 UnityPy 对象，兼容 .read()、.source_path、.type.name 等访问。"""
@@ -194,10 +149,6 @@ class BundleExtractor:
 
         def read(self) -> "BundleExtractor._MockReadData":
             return self._read_data
-
-    # ------------------------------------------------------------------
-    # search_unity_pack — CLI list（目录并发，单文件顺序）
-    # ------------------------------------------------------------------
 
     def search_unity_pack(
         self,
@@ -310,57 +261,8 @@ class BundleExtractor:
 
         return data_list
 
-    # ------------------------------------------------------------------
-    # Unity SerializedFile 安全 CRC 修补位置
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _find_safe_patch_position(file_path: str) -> Optional[int]:
-        """
-        在 Unity SerializedFile 的 metadata↔data 填充区中找到一个安全的
-        4 字节覆写位置，用于 CRC 修补。
-
-        Unity SerializedFile 的布局：
-          [header | metadata | padding… | data section]
-        其中 *data_offset* 指向数据段起始偏移。padding 区域全为 0x00，
-        覆写其中的 4 字节不会影响任何 Unity 对象的读取。
-
-        如果不是 SerializedFile 或没有足够的 padding，返回 None。
-        """
-        try:
-            with open(file_path, 'rb') as f:
-                header = f.read(48)
-            if len(header) < 20:
-                return None
-            # 排除 AssetBundle 格式（UnityFS / UnityWeb / UnityRaw）
-            if header[:7] in (b'UnityFS', b'UnityWe', b'UnityRa'):
-                return None
-            # format version 固定位于 offset 8 (uint32 big-endian)
-            version = struct.unpack_from('>I', header, 8)[0]
-            if version < 9:
-                return None
-            # 根据版本号获取 data_offset
-            if version >= 22:
-                # v22+: data_offset 为 int64 BE，位于 offset 0x20
-                if len(header) < 0x28:
-                    return None
-                data_offset = struct.unpack_from('>q', header, 0x20)[0]
-            else:
-                # v9~v21: data_offset 为 uint32 BE，位于 offset 12
-                data_offset = struct.unpack_from('>I', header, 12)[0]
-            file_size = os.path.getsize(file_path)
-            # 使用 padding 区域末尾 4 字节（紧邻 data section 之前）
-            safe_pos = data_offset - 4
-            if safe_pos >= 28 and data_offset <= file_size:
-                return safe_pos
-            return None
-        except Exception:
-            return None
-
     def _patch_crc(self, filepath: str, original_crc: int) -> None:
         """
-        在不破坏 Unity 资产数据的前提下修补文件的 CRC。
-        
         通过在文件末尾追加 4 字节补丁，使文件整体 CRC 恢复到修改前的值。
         """
         # 读取经 UABEA 修改后的文件数据
@@ -385,10 +287,6 @@ class BundleExtractor:
         # 将修补后的数据写回原文件
         with open(filepath, "wb") as f:
             f.write(output_io.getvalue())
-
-    # ------------------------------------------------------------------
-    # modify_and_replace — CLI import + CRC/Size 修补
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _new_data_to_file(
@@ -525,16 +423,12 @@ class BundleExtractor:
         except Exception:
             pass
 
-    # ------------------------------------------------------------------
-    # extract_bundle — UABEA CLI export（Step 3）
-    # ------------------------------------------------------------------
-
     # UABEA 导出格式映射
     _EXPORT_FORMAT: dict = {
         "Texture2D": "png",
         "Sprite":    "png",
         "AudioClip": "wav",
-        "TextAsset": "raw",
+        "TextAsset": "txt",
         "Font":      "raw",
         "VideoClip": "raw",
         "Mesh":      "raw",
@@ -545,17 +439,19 @@ class BundleExtractor:
     @staticmethod
     def _strip_uabea_suffix(filename: str) -> str:
         """
-        去除 UABEA 导出文件名中的 -{entry}-{PathID} 后缀，还原为资源名。
-        例: "Arial-sharedassets0-123.dat" → "Arial.dat"
+        去除 UABEA 导出后缀：保留第一个点号前的名字，或者截断 -CAB- 后缀。
         """
-        stem, _, ext = filename.rpartition(".")
-        # 去掉末尾两段 "-xxx"（PathID + entry）
-        parts = stem.rsplit("-", 2)
-        if len(parts) == 3:
+        name_part, _, ext = filename.rpartition(".")
+        
+        # 1. 优先处理 -CAB- 分割，取最左侧部分
+        if "-CAB-" in name_part:
+            return name_part.split("-CAB-")[0] + "." + ext
+        
+        # 2. 如果没有 CAB，尝试移除常见的 -xxx-xxx 后缀
+        parts = name_part.rsplit("-", 2)
+        if len(parts) >= 2 and len(parts[-1]) > 8: # 简单校验：PathID通常较长
             return parts[0] + "." + ext
-        if len(parts) == 2:
-            # assets 文件：只有 PathID
-            return parts[0] + "." + ext
+            
         return filename
 
     def extract_bundle(self, res_path: str, extract_types: Optional[List[str]] = None) -> None:
@@ -569,9 +465,7 @@ class BundleExtractor:
 
         for obj_type in types_to_extract:
             fmt = self._EXPORT_FORMAT.get(obj_type, "raw")
-            extract_folder = path.join(self.BUNDLE_EXTRACT_FOLDER, obj_type)
-            os.makedirs(extract_folder, exist_ok=True)
-
+            
             with tempfile.TemporaryDirectory() as tmp_dir:
                 export_args = [
                     "export", path_flag, res_path,
@@ -583,23 +477,23 @@ class BundleExtractor:
                     export_args.append("--recursive")
 
                 result = self._run_uabea(export_args)
-                if result.returncode != 0:
+                
+                # 检查临时目录中是否确实导出了文件
+                exported_files = [f for f in os.listdir(tmp_dir) if path.isfile(path.join(tmp_dir, f))]
+                if result.returncode != 0 or not exported_files:
                     continue
 
-                for fname in os.listdir(tmp_dir):
+                # 只有在有资源的情况下才创建目标文件夹
+                extract_folder = path.join(self.BUNDLE_EXTRACT_FOLDER, obj_type)
+                os.makedirs(extract_folder, exist_ok=True)
+
+                for fname in exported_files:
                     src = path.join(tmp_dir, fname)
-                    if not path.isfile(src):
-                        continue
                     clean_name = self._strip_uabea_suffix(fname)
                     dst = path.join(extract_folder, clean_name)
-                    # 避免同名覆盖（取第一个）
                     if not path.exists(dst):
                         import shutil
                         shutil.move(src, dst)
-
-    # ------------------------------------------------------------------
-    # multiprocess_extract_worker — 直接调用 UABEA CLI export -d（Step 4）
-    # ------------------------------------------------------------------
 
     def multiprocess_extract_worker(self, tasks: multiprocessing.Queue, extract_types: Optional[List[str]]) -> None:
         """
