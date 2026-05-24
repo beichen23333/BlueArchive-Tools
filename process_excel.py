@@ -1,32 +1,70 @@
 import os
+import sys
+import json
 from argparse import ArgumentParser
 from pathlib import Path
 from utils.config import Config
 from xtractor.table import TableProcess
+from utils.util import CommandUtils
+from lib.encryption import calculate_crc
+from xtractor.catalog import CatalogMemoryPack
 
 def parse_args():
     p = ArgumentParser(description="JSON 数据提取/打包工具")
-    p.add_argument("table_file_folder", type=Path, help="ExcelDB.db和Excel.zip的路径")
-    p.add_argument("file_path", type=Path, help="文件的输出路径/需打包的文件输入路径")
-    p.add_argument("server", type=str, choices=["CN", "GL", "JP"], help="服务器区域，用于自适应加解密方式")
-    p.add_argument("type", type=str, choices=["Extract", "Repack"], help="选择加密/解密文件")
-    p.add_argument("--db_key", type=str, help="加解密数据库所需的密钥 (如果有则使用，无则正常)")
+    p.add_argument("table_file_folder", type=Path)
+    p.add_argument("file_path", type=Path)
+    p.add_argument("server", choices=["CN", "GL", "JP"])
+    p.add_argument("type", choices=["Extract", "Repack"])
+    p.add_argument("--catalog", action="store_true")
+    p.add_argument("--name", action="store_true")
+    p.add_argument("--db_key", type=str)
     return p.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-
     args.file_path.mkdir(parents=True, exist_ok=True)
-
     Config.server = args.server
 
-    # 密钥自己搞，由服务器下发，可解析getway或hook获取
     if args.db_key:
         Config.db_password = args.db_key
+
+    catalog_data = None
+    if args.type == "Repack" and args.catalog:
+        CommandUtils.run_command(sys.executable, "-m", "get.get_catalog", args.server, "Table", "Android")
+        with open("Download/TableCatalog.json", "r", encoding="utf-8") as f:
+            catalog_data = json.load(f)
 
     process = TableProcess(str(args.table_file_folder), str(args.file_path), "FlatData")
 
     if os.path.exists(os.path.join(args.table_file_folder, "ExcelDB.db")):
         process.process_table("ExcelDB.db", args.type)
+        if catalog_data and "ExcelDB.db" in catalog_data.get("Table", {}):
+            file_path = os.path.join(args.table_file_folder, "ExcelDB.db")
+            new_crc = calculate_crc(file_path)
+            catalog_data["Table"]["ExcelDB.db"]["Size"] = os.path.getsize(file_path)
+            catalog_data["Table"]["ExcelDB.db"]["Crc"] = new_crc
+            if args.name:
+                new_name = f"6993339912994747134_{new_crc}"
+                os.rename(file_path, os.path.join(args.table_file_folder, new_name))
+
     if os.path.exists(os.path.join(args.table_file_folder, "Excel.zip")):
         process.process_table("Excel.zip", args.type)
+        if catalog_data and "Excel.zip" in catalog_data.get("Table", {}):
+            file_path = os.path.join(args.table_file_folder, "Excel.zip")
+            new_crc = calculate_crc(file_path)
+            catalog_data["Table"]["Excel.zip"]["Size"] = os.path.getsize(file_path)
+            catalog_data["Table"]["Excel.zip"]["Crc"] = new_crc
+            if args.name:
+                new_name = f"16300795542385574620_{new_crc}"
+                os.rename(file_path, os.path.join(args.table_file_folder, new_name))
+
+    if catalog_data:
+        with open("Download/TableCatalog.json", "w", encoding="utf-8") as f:
+            json.dump(catalog_data, f, indent=2, ensure_ascii=False)
+
+        if Config.server != "CN":
+            CatalogMemoryPack(install_dir="tools").run(
+                server=args.server, mode="serialize", catalog_type="table",
+                input_path=os.path.abspath("Download/TableCatalog.json"),
+                output_path=os.path.abspath("Download/TableCatalog.bytes")
+            )
