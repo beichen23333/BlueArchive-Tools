@@ -1,14 +1,5 @@
 """Dump il2cpp file to csharp file."""
-
-import json
-import os
-import platform
-import shutil
-from os import path
-
-from lib.downloader import FileDownloader
-from utils.util import CommandUtils, FileUtils, ZipUtils, ToolManager
-from utils.config import Config
+from utils.util import CommandUtils, ToolManager
 from lib.compiler import CompileToPython, CSParser
 
 def compile_python(dump_cs_path, extract_dir) -> None:

@@ -83,7 +83,7 @@ jobs:
               break
             fi
 
-            python update.py ${{ matrix.server }}
+            python -m update.update ${{ matrix.server }}
 
             if [ -f "UPDATE_FOUND" ]; then
               echo "detected=true" >> $GITHUB_OUTPUT
