@@ -10,5 +10,6 @@ pillow
 click
 tqdm
 pydub
+lxml
 ./PyCriCodecs
 ./crcmanip
