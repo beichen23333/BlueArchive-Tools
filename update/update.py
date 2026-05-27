@@ -67,7 +67,7 @@ if __name__ == "__main__":
         server_url, platform_id, channel_id, version
     )
 
-    # 3. 写入环境变量
+    # 写入环境变量
     new_env_content = [
         f"ServerInfoDataUrl={server_url}\n",
         f"AddressableCatalogUrl={addressable_url}\n",
@@ -108,12 +108,11 @@ if __name__ == "__main__":
 
     # 后续 Dumper 逻辑（非 JPPC 且是大版本时运行）
     if major and Config.server != "JPPC":
-        dumper = IL2CppDumper()
-        dumper.get_il2cpp_dumper("Temp")
+        dumper = IL2CppDumper(install_dir="tools")
 
         metadata_path = os.path.abspath(FileUtils.find_files("Temp", [r"global-metadata\.dat"], True, True)[0])
         il2cpp_path = os.path.abspath(FileUtils.find_files("Temp", [r"libil2cpp\.so"], True, True)[0])
-        dumper.dump_il2cpp(os.path.abspath("Dumps"), il2cpp_path, metadata_path, 5)
+        dumper.dump_il2cpp(Config.server, il2cpp_path, metadata_path, os.path.abspath("Dumps/dump.cs"))
 
         notice("成功生成dump.cs。")
         compile_python(os.path.join(os.path.abspath("Dumps"), "dump.cs"), "FlatData")

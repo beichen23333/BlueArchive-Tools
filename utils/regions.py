@@ -67,7 +67,7 @@ class Server:
         return apk_url, version
 
     def get_game_main_config(self, files_path) -> str:
-        extractor = BundleExtractor(EXTRACT_DIR="Extracted")
+        extractor = BundleExtractor(install_dir="tools", EXTRACT_DIR="Extracted")
         config_data = {}
 
         if Config.server == "GL":
@@ -99,7 +99,7 @@ class Server:
                     "PlatformID": "wBgDdzgJJFH2GAB3Kwk9UdkYK3c=",
                     "ChannelID": "SiMCCCkfsBxnIw8IJB+XHE0j",
                 }
-            b64_data = base64.b64encode(raw_script.encode("utf-8", "surrogateescape")).decode()
+            b64_data = base64.b64encode(raw_script).decode("utf-8")
             json_str = convert_string(b64_data, create_key("GameMainConfig"))
             raw_json_obj = json.loads(json_str)
                 
