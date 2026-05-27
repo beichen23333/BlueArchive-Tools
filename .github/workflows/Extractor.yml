@@ -80,8 +80,8 @@ jobs:
       - name: Get Version
         id: version
         run: |
-          chmod +x other/get_version.sh
-          VERSION=$(./other/get_version.sh ${{ github.event.client_payload.server }} true TableVersion)
+          chmod +x get/get_version.sh
+          VERSION=$(./get/get_version.sh ${{ github.event.client_payload.server }} true TableVersion)
           echo "full_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Execute Table Logic

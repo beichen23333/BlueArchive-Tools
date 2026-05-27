@@ -107,8 +107,8 @@ jobs:
         if: steps.update.outputs.major == 'true' && matrix.server != 'JPPC'
         id: get_version
         run: |
-          chmod +x ./other/get_version.sh
-          VERSION=$(./other/get_version.sh ${{ matrix.server }} false)
+          chmod +x ./get/get_version.sh
+          VERSION=$(./get/get_version.sh ${{ matrix.server }} false)
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Compress Data
