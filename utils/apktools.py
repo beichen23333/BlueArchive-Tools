@@ -1,8 +1,9 @@
 import shutil
+import json
+import re
 from pathlib import Path
 from utils.util import CommandUtils
 from lxml import etree
-import re
 
 class ApkTools:
     def _run_apktool(self, args):
@@ -70,6 +71,30 @@ class ApkTools:
         new_xml = etree.tostring(root, encoding='utf-8', pretty_print=True).decode('utf-8')
         with open(manifest_path, 'w', encoding='utf-8') as f:
             f.write(new_xml)
+
+    def modify_resources(self, output_dir):
+        base_path = Path(output_dir)
+    
+        # 修改 app_name
+        for p in base_path.glob("res/values*/strings.xml"):
+            try:
+                content = p.read_text(encoding='utf-8')
+                if '<string name="app_name">ブルアカ</string>' in content:
+                    p.write_text(content.replace('<string name="app_name">ブルアカ</string>', '<string name="app_name">蔚蓝档案</string>'), encoding='utf-8')
+            except Exception as e:
+                print(f"Failed to modify strings.xml at {p}: {e}")
+
+        # 修改登录界面文本
+        try:
+            res_data = json.loads(Path("other/resources.json").read_text(encoding='utf-8'))
+            ja_path = base_path / "res/values-ja/strings.xml"
+
+            content = ja_path.read_text(encoding='utf-8')
+            for item in res_data:
+                content = re.sub(rf'(?s)<string name="{item["name"]}">.*?</string>', f'<string name="{item["name"]}">{item["text"]}</string>', content)
+            ja_path.write_text(content, encoding='utf-8')
+        except Exception as e:
+            print(f"Failed to process values-ja/strings.xml or resources.json: {e}")
 
     def sign(self, apk_path, out_path):
         success, error = CommandUtils.run_command('java', '-jar', "BAJpApkSrc/apksigner.jar", 'sign', '--ks', "BAJpApkSrc/beichen.jks", '--ks-pass', 'pass:北辰汉化组a', '--key-pass', 'pass:北辰汉化组a', '--out', out_path, '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'true', '--v3-signing-enabled', 'true', apk_path)

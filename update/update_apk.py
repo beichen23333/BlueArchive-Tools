@@ -21,9 +21,6 @@ if __name__ == "__main__":
     
     dex_backup_path = base_dir / "DexBackup"
     dex_backup_path.mkdir(exist_ok=True)
-    
-    res_backup_path = base_dir / "ResBackup"
-    res_backup_path.mkdir(exist_ok=True)
 
     apk_tools = ApkTools()
     apk_url, version = Server().get_apk_url()
@@ -36,7 +33,7 @@ if __name__ == "__main__":
     main_apk = next(a for a in apks if "UnityDataAssetPack" not in a and "config" not in a)
     others = [a for a in apks if a != main_apk]
 
-    print(f"[DEBUG] 确定 Main APK: {main_apk}")
+    print(f"确定 Main APK: {main_apk}")
 
     # 备份dex文件
     with zipfile.ZipFile(main_apk, 'r') as z:
@@ -44,7 +41,8 @@ if __name__ == "__main__":
         for dex in dex_files:
             with open(dex_backup_path / dex, 'wb') as f:
                 f.write(z.read(dex))
-            print(f"[DEBUG] 已备份 Main APK DEX: {dex}")
+            print(f"已备份 Main APK DEX: {dex}")
+
     # 对main apk拆包
     apk_tools.extract(main_apk, main_output_path)
     # 把其他两个apk的assets和lib文件夹扔到Temp/TempExtract文件夹下
@@ -58,76 +56,55 @@ if __name__ == "__main__":
     shutil.rmtree(temp_extract_path)
     apk_path.unlink()
 
-    # 备份logo视频文件
-    target_res_file = "assets/bin/Data/sharedassets0.resource"
-    src_res_path = main_output_path / target_res_file
-    if src_res_path.exists():
-        dst_res_path = res_backup_path / target_res_file
-        dst_res_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_res_path, dst_res_path)
-        print(f"[DEBUG] 已备份原版资源: {target_res_file}")
+    yml_path = main_output_path / "apktool.yml"
+    with open(yml_path, 'r', encoding='utf-8') as f:
+        yml_content = f.read()
+    # 确保mp4视频不会被压缩
+    if 'doNotCompress:' in yml_content and '- mp4' not in yml_content:
+        yml_content = yml_content.replace('doNotCompress:', 'doNotCompress:\n- mp4')
+        with open(yml_path, 'w', encoding='utf-8') as f:
+            f.write(yml_content)
 
-    # 备份Video视频文件夹
-    target_video_dir = "assets/Video"
-    src_video_path = main_output_path / target_video_dir
-    if src_video_path.exists():
-        dst_video_path = res_backup_path / target_video_dir
-        dst_video_path.parent.mkdir(parents=True, exist_ok=True)
-        copy_tree(str(src_video_path), str(dst_video_path))
-        print(f"[DEBUG] 已备份原版视频文件夹: {target_video_dir}")
-
-    apk_tools.modify_manifest(main_output_path, is_coexist=True)
+    apk_tools.modify_manifest(main_output_path, True)
+    apk_tools.modify_resources(main_output_path)
 
     # 封包
     apk_tools.build(main_output_path, "蔚蓝档案.apk")
     
     rebuilt_apk = Path("蔚蓝档案.apk")
     temp_apk = rebuilt_apk.with_suffix(".tmp.apk")
-    no_compress = ["resources.arsc", "assets/bin/Data/sharedassets0.resource", "assets/Video/"]
+
+    TARGET_DATE = (1981, 1, 1, 0, 0, 0)
 
     with zipfile.ZipFile(rebuilt_apk, 'r') as zin, zipfile.ZipFile(temp_apk, 'w') as zout:
         for item in zin.infolist():
             if item.filename.startswith("classes") and item.filename.endswith(".dex"):
                 continue
-            if item.filename.startswith(tuple(no_compress)):
-                if "resources.arsc" not in item.filename:
-                    continue
             
             new_item = zipfile.ZipInfo(item.filename)
-            new_item.date_time = item.date_time
+            new_item.date_time = TARGET_DATE  # 修改非DEX文件的日期
             new_item.external_attr = item.external_attr
             
+            # resources.arsc以非压缩方式存储
             if item.filename == "resources.arsc":
                 new_item.compress_type = zipfile.ZIP_STORED
             else:
-                new_item.compress_type = zipfile.ZIP_DEFLATED
+                new_item.compress_type = item.compress_type
                 
             zout.writestr(new_item, zin.read(item.filename))
     
-        for root, dirs, files in os.walk(res_backup_path):
-            for file in files:
-                full_path = Path(root) / file
-                rel_path = full_path.relative_to(res_backup_path)
-                arcname = str(rel_path).replace(os.path.sep, '/')
-                
-                new_item = zipfile.ZipInfo(arcname)
-                new_item.compress_type = zipfile.ZIP_STORED
-                with open(full_path, 'rb') as f:
-                    zout.writestr(new_item, f.read())
-                print(f"[DEBUG] [原文件注入] 成功添加原始不压缩资源 (STORED): {arcname}")
-
         for dex_file in os.listdir(dex_backup_path):
             dex_path = dex_backup_path / dex_file
             new_item = zipfile.ZipInfo(dex_file)
+            new_item.date_time = TARGET_DATE
             new_item.compress_type = zipfile.ZIP_DEFLATED
             with open(dex_path, 'rb') as f:
                 zout.writestr(new_item, f.read())
-            print(f"[DEBUG] [原文件注入] 成功添加原始 DEX (DEFLATED): {dex_file}")
+            print(f"成功添加原始 DEX并修改时间: {dex_file}")
 
     rebuilt_apk.unlink()
-    apk_tools.sign(temp_apk , rebuilt_apk)
+    apk_tools.sign(temp_apk, rebuilt_apk)
     temp_apk.unlink()
 
-#    shutil.rmtree(dex_backup_path)
-#    shutil.rmtree(res_backup_path)
-#    shutil.rmtree(main_output_path)
+    shutil.rmtree(dex_backup_path)
+    shutil.rmtree(main_output_path)
