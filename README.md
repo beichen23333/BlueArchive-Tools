@@ -3,8 +3,6 @@
 [![License](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 ![Status](https://img.shields.io/badge/Status-Developing-orange.svg)
 ![Game](https://img.shields.io/badge/Game-Blue%20Archive-cyan.svg)
-[![Extractor Voice](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/ExtractorVoice.yml/badge.svg)](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/ExtractorVoice.yml)
-[![Update](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/Update.yml/badge.svg)](https://github.com/beichen23333/BlueArchive-Tools/actions/workflows/Update.yml)
 
 **蔚蓝档案汉化工具集** —— 开源绝大部分内容，为 BA 本地化汉化提供技术支持。
 
@@ -16,11 +14,17 @@
 
 ### 核心引用与致谢
 本项目包含并修改了以下仓库的代码，感谢原作者的开源贡献：
-*  [ZM-Kimu/Blue-Archive-Asset-Downloader](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader)(MIT license)
-*  [asfu222/BlueArchiveLocalizationTools](https://github.com/asfu222/BlueArchiveLocalizationTools)(MIT license)
-*  [rr-/pycrcmanip](https://github.com/rr-/pycrcmanip)(MIT license)
-*  [nesrak1/UABEA](https://github.com/nesrak1/UABEA)(MIT license)
-*  [Youjose/PyCriCodecs](https://github.com/Youjose/PyCriCodecs)
+
+| 项目名称 | 项目地址 | 开源协议 |
+| :--- | :--- | :--- |
+| **Blue-Archive-Asset-Downloader** | [ZM-Kimu/Blue-Archive-Asset-Downloader](https://github.com/ZM-Kimu/Blue-Archive-Asset-Downloader) | MIT |
+| **BlueArchiveLocalizationTools** | [asfu222/BlueArchiveLocalizationTools](https://github.com/asfu222/BlueArchiveLocalizationTools) | MIT |
+| **pycrcmanip** | [rr-/pycrcmanip](https://github.com/rr-/pycrcmanip) | MIT |
+| **UABEA (H9per 版 CLI)** | [H9per/UABEA](https://github.com/H9per/UABEA) | MIT |
+| **PyCriCodecs** | [Youjose/PyCriCodecs](https://github.com/Youjose/PyCriCodecs) | 无 |
+| **Il2CppInspectorRedux** | [LukeFZ/Il2CppInspectorRedux](https://github.com/LukeFZ/Il2CppInspectorRedux) | AGPL-3.0 |
+| **Cpp2IL** | [SamboyCoding/Cpp2IL](https://github.com/SamboyCoding/Cpp2IL) | MIT |
+| **SpineSkeletonDataConverter** | [wang606/SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) | PolyForm Noncommercial 1.0.0 |
 
 ---
 
@@ -47,5 +51,5 @@
 > [!NOTE]
 > **许可证说明**：
 >
-> 本项目中引用的部分代码基于 **MIT 许可证** 开源。在遵守 AGPL-3.0 的同时，请同样尊重原作者的 MIT 协议要求。
+> 本项目中引用的部分代码基于 **原仓库 许可证** 开源。在遵守 AGPL-3.0 的同时，请同样尊重原作者的开源协议要求。
 > 如有特殊情况，请联系我并进行说明。
