@@ -15,8 +15,6 @@ from typing import Any, Literal, List, Optional, Union
 from PIL import Image
 from lib.console import ProgressBar
 from lib.downloader import FileDownloader
-from crcmanip.crc import CRC32
-from crcmanip.algorithm import apply_patch, consume
 from utils.util import ZipUtils, ToolManager
 
 class BundleExtractor(ToolManager):
@@ -261,11 +259,25 @@ class BundleExtractor(ToolManager):
 
         return data_list
 
-    def _patch_crc(self, filepath: str, original_crc: int) -> None:
+    def _patch_crc(self, filepath: str, original_crc_int: int) -> None:
         """
         通过在文件末尾追加 4 字节补丁，使文件整体 CRC 恢复到修改前的值。
+        包含详细 Debug 打印校验对比过程。
         """
-        # 读取经 UABEA 修改后的文件数据
+        import io
+        from crcmanip.crc import CRC32
+        from crcmanip.algorithm import apply_patch, consume
+
+        # [DEBUG] 1. 计算 UABEA 刚刚修改完后，现在的 CRC 是多少
+        codec_before = CRC32()
+        with open(filepath, "rb") as f:
+            consume(codec_before, f)
+        current_crc = codec_before.digest()
+        
+        print(f"\n[DEBUG CRC] 正在处理文件: {os.path.basename(filepath)}")
+        print(f"  --> 原文件目标 CRC (Expected) : 0x{original_crc_int:08X}")
+        print(f"  --> UABEA修改后 CRC (Current) : 0x{current_crc:08X}")
+
         with open(filepath, "rb") as f:
             data = f.read()
         
@@ -274,10 +286,10 @@ class BundleExtractor(ToolManager):
         file_size = len(data)
 
         codec = CRC32()
-        # 计算并应用补丁，在当前文件末尾 (target_pos=file_size) 增加字节
+        # 计算并应用补丁，在当前文件末尾增加字节
         apply_patch(
             crc=codec,
-            target_checksum=original_crc,
+            target_checksum=original_crc_int,
             input_handle=input_io,
             output_handle=output_io,
             target_pos=file_size,
@@ -285,8 +297,21 @@ class BundleExtractor(ToolManager):
         )
 
         # 将修补后的数据写回原文件
+        patched_data = output_io.getvalue()
         with open(filepath, "wb") as f:
-            f.write(output_io.getvalue())
+            f.write(patched_data)
+
+        # [DEBUG] 2. 验证写入 Patch 后的最终 CRC
+        codec_after = CRC32()
+        with open(filepath, "rb") as f:
+            consume(codec_after, f)
+        final_crc = codec_after.digest()
+        
+        print(f"  --> Patch附加后 CRC (Final)   : 0x{final_crc:08X}")
+        if final_crc == original_crc_int:
+            print("  --> [成功] CRC 修补校验匹配！\n")
+        else:
+            print("  --> [失败] 严重错误，CRC 修补不一致！\n")
 
     @staticmethod
     def _new_data_to_file(
@@ -507,3 +532,80 @@ class BundleExtractor(ToolManager):
                 self.extract_bundle(bundle_path, extract_types)
             except Exception:
                 pass
+
+    def replace_asset_from_file(self, folder_path: str, asset_name: str, file_path: str, crc_fix: bool = True) -> None:
+        if os.path.isdir(folder_path):
+            list_result = self._run_uabea([
+                "list", "-d", folder_path, "-n", f"={asset_name}", "--recursive",
+            ])
+            if list_result.returncode != 0:
+                return
+            all_matches = [
+                m for m in self._parse_list_output(list_result.stdout)
+                if m["name"] == asset_name
+            ]
+            if not all_matches:
+                return
+            seen_files = set()
+            for match in all_matches:
+                target_filepath = match.get("source_path", "")
+                if target_filepath and target_filepath not in seen_files:
+                    seen_files.add(target_filepath)
+                    self._import_file_direct(target_filepath, match, asset_name, file_path, crc_fix)
+        else:
+            list_result = self._run_uabea([
+                "list", "-f", folder_path, "-n", f"={asset_name}",
+            ])
+            if list_result.returncode != 0:
+                return
+            matches = [
+                m for m in self._parse_list_output(list_result.stdout)
+                if m["name"] == asset_name
+            ]
+            if not matches:
+                return
+            self._import_file_direct(folder_path, matches[0], asset_name, file_path, crc_fix)
+
+    def _import_file_direct(self, filepath: str, match: dict, asset_name: str, file_path: str, crc_fix: bool) -> None:
+        try:
+            # ── 1. 获取并记录被修改前的原始 CRC32 值 ──────────────────────
+            original_crc_int = 0
+            if crc_fix:
+                from crcmanip.crc import CRC32
+                from crcmanip.algorithm import consume
+                codec = CRC32()
+                with open(filepath, "rb") as f:
+                    consume(codec, f)
+                original_crc_int = codec.digest()
+
+            obj_type = match["type"]
+            entry = match["entry"]
+            path_id = match["path_id"]
+
+            ext = os.path.splitext(file_path)[1]
+            if not ext:
+                if obj_type == "TextAsset": ext = ".txt"
+                elif obj_type == "Texture2D": ext = ".png"
+                elif obj_type == "Font": ext = ".ttf"
+                else: ext = ".dat"
+
+            stem = f"{asset_name}-{entry}-{path_id}" if entry else f"{asset_name}-{path_id}"
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                import_file = os.path.join(tmp_dir, stem + ext)
+                import shutil
+                shutil.copy2(file_path, import_file)
+
+                # ── 2. 执行导入修改 ──────────────────────
+                imp = self._run_uabea(["import", "-f", filepath, "-i", tmp_dir])
+                if imp.returncode != 0:
+                    print(f"[DEBUG] UABEA import 失败: {imp.stderr}")
+                    return
+
+            # ── 3. 进行 CRC 修补并传入我们刚才算好的原始 CRC ────────────────
+            if crc_fix:
+                self._patch_crc(filepath, original_crc_int)
+
+        except Exception as e:
+            print(f"[DEBUG] 发生异常: {e}")
+            pass
