@@ -19,6 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--coexist", action="store_true")
     parser.add_argument("--sdkurl", type=str, help="修改SDK_Url的值")
     parser.add_argument("--gamemainconfig", type=str, help="修改GameMainConfig的字段")
+    parser.add_argument("--trustcert", action="store_true")
     args = parser.parse_args()
 
     Config.server = "JP"
@@ -79,7 +80,12 @@ if __name__ == "__main__":
             with open(yml_path, 'w', encoding='utf-8') as f:
                 f.write(yml_content)
 
-    apk_tools.modify_manifest(main_output_path, args.coexist)
+    apk_tools.modify_manifest(main_output_path, args.coexist, args.trustcert)
+    
+    if args.trustcert:
+        xml_dir = main_output_path / "res" / "xml"
+        shutil.copy("BAJpApkSrc/network_security_config.xml", str(xml_dir / "network_security_config.xml"))
+
     apk_tools.modify_resources(main_output_path)
 
     replace_dir = Path("BAJpApkSrc/Replace")

@@ -22,7 +22,7 @@ class ApkTools:
         args = ["b", str(input_dir), "-o", str(output_apk)]
         return self._run_apktool(args)
 
-    def modify_manifest(self, output_dir, is_coexist=False):
+    def modify_manifest(self, output_dir, is_coexist=False, trust_cert=False):
         manifest_path = Path(output_dir) / "AndroidManifest.xml"
         with open(manifest_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -54,6 +54,11 @@ class ApkTools:
                 content = content.replace(temp_marker, original_host)
 
         root = etree.fromstring(content.encode('utf-8'))
+
+        if trust_cert:
+            app_element = root.find(".//application")
+            if app_element is not None:
+                app_element.set('{http://schemas.android.com/apk/res/android}networkSecurityConfig', '@xml/network_security_config')
 
         # 删除Split标识
         for attr in ['{http://schemas.android.com/apk/res/android}requiredSplitTypes', '{http://schemas.android.com/apk/res/android}splitTypes']:
