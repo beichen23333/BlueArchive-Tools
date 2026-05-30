@@ -86,7 +86,7 @@ class ApkTools:
 
         # 修改登录界面文本
         try:
-            res_data = json.loads(Path("other/resources.json").read_text(encoding='utf-8'))
+            res_data = json.loads(Path("BAJpApkSrc/resources.json").read_text(encoding='utf-8'))
             ja_path = base_path / "res/values-ja/strings.xml"
 
             content = ja_path.read_text(encoding='utf-8')

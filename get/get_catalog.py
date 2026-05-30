@@ -1,4 +1,5 @@
 import os
+import requests
 import dotenv
 from argparse import ArgumentParser
 from typing import Optional, Tuple
@@ -77,6 +78,28 @@ def main():
     dotenv.load_dotenv(f"other/BA_{Config.server}.env")
     base_url = os.getenv('AddressableCatalogUrl')
     
+    url_to_check = None
+    if args.server == "CN":
+        if args.type == "Media":
+            url_to_check = f"{base_url}/Manifest/MediaResources/{os.getenv('MediaVersion')}/MediaManifest"
+        elif args.type == "Bundle":
+            url_to_check = f"{base_url}/AssetBundles/Catalog/{os.getenv('ResourceVersion')}/{args.client}/bundleDownloadInfo.json"
+        elif args.type == "Table":
+            url_to_check = f"{base_url}/Manifest/TableBundles/{os.getenv('TableVersion')}/TableManifest"
+    else:
+        url_to_check, _ = resolve_download_metadata(args, base_url)
+
+    # 判断服务器开没开
+    if url_to_check:
+        try:
+            res = requests.head(url_to_check, timeout=10)
+            if res.status_code != 200:
+                res = requests.get(url_to_check, stream=True, timeout=10)
+                if res.status_code != 200:
+                    return
+        except:
+            return
+
     os.makedirs("Download", exist_ok=True)
 
     if args.server == "CN":
@@ -94,6 +117,9 @@ def main():
                 ZipUtils.extract_zip(zip_path, "Download")
 
             run_deserialization(args, filename)
+            
+    with open("CATALOG_FOUND", "w") as f:
+        f.write("1")
 
 if __name__ == "__main__":
     main()
