@@ -31,9 +31,9 @@ jobs:
 
   process:
     needs: prepare
-    outputs:
-      should_restart: ${{ steps.check_reason.outputs.should_restart
     runs-on: ubuntu-latest
+    outputs:
+      should_restart: ${{ steps.check_reason.outputs.should_restart }}
     strategy:
       matrix:
         platform: ${{ fromJson(needs.prepare.outputs.matrix) }}

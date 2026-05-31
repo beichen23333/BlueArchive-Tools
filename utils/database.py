@@ -10,7 +10,7 @@ class TableDatabase:
         cursor = self.connection.cursor()
         if Config.db_password:
             # 日服文件被加密了，需要使用密钥解密，这里有密钥就用，没有则正常。
-            cursor.execute(f"PRAGMA key = \"{Config.db_password}\";")
+            cursor.execute(f"PRAGMA key = \"x'{Config.db_password}'\";")
         try:
             cursor.execute("SELECT count(*) FROM sqlite_master;")
             print("数据库连接成功！")
