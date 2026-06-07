@@ -15,6 +15,7 @@ BAJpApkSrc/
 *.zip
 .env
 *.apk
+.script_cfg
 
 测试*
 
