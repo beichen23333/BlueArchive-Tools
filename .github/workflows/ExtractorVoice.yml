@@ -3,7 +3,7 @@ name: Extractor Voice
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [voice]
+    types: [Voice]
 
 permissions:
   contents: write
@@ -14,7 +14,6 @@ jobs:
     env:
       PYTHONUTF8: 1
       PYTHONUNBUFFERED: "1"
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

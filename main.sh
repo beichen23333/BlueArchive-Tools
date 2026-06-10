@@ -14,7 +14,6 @@ if [ -f "$CONFIG_FILE" ]; then
 else
     case "$LANG" in
         *zh_*) LANG_TYPE="CN" ;;
-        *ja_*) LANG_TYPE="JP" ;;
         *vi_*) LANG_TYPE="VN" ;;
         *) LANG_TYPE="CN" ;;
     esac
@@ -38,18 +37,20 @@ get_text() {
                 "LANG_SET") echo "语言设置 / Language Settings" ;;
                 "PACK_APK") echo "打包 APK" ;;
                 "PROCESS_EXCEL") echo "处理ExcelDB.db和Excel.zip" ;;
-                "SDK_PROMPT") echo "输入SDKURL (留空跳过): " ;;
-                "CFG_PROMPT") echo "是否修改GameMainConfig? (y/n): " ;;
-                "FIELDS_PROMPT") echo "请输入字段名(逗号隔开): " ;;
-                "VALUE_PROMPT") echo "请输入 %s 的值: " ;;
-                "COEXIST_PROMPT") echo "是否使用共存包? (y/n): " ;;
+                "SDK_PROMPT") echo "输入SDKURL (留空则跳过): " ;;
+                "CFG_PROMPT") echo "输入GameMainConfig (留空则跳过): " ;;
+                "COEXIST_PROMPT") echo "请输入自定义包名 (留空则跳过): " ;;
+                "LOGIN_PROMPT") echo "请输入修改的登录界面语言 (留空则跳过): " ;;
+                "REPLACE_PROMPT") echo "是否替换资源? (y/n): " ;;
+                "BUNDLE_PROMPT") echo "是否修改Bundle资源? (y/n): " ;;
+                "REPO_PROMPT") echo "请输入资源文件夹路径 (留空则默认BAJpApkSrc): " ;;
                 "TRUST_PROMPT") echo "是否信任ca证书? (y/n): " ;;
-                "LOGIN_PROMPT") echo "是否修改登录文本为中文? (y/n): " ;;
                 "CLONING") echo "正在从 GitHub 克隆..." ;;
                 "RUNNING_CMD") echo "执行命令: %s" ;;
                 "DONE_RETURN") echo "按任意键返回..." ;;
                 "INVALID_INPUT") echo "输入无效，请重新输入。" ;;
                 "SERVER_PROMPT") echo "请选择服务器 (CN/JP/GL): " ;;
+                "SERVER_PROMPT_APK") echo "请选择服务器 (JP/GL): " ;;
                 "MODE_PROMPT") echo "请选择模式 (Extract / Repack): " ;;
                 "TABLE_FOLDER_PROMPT") echo "请输入 ExcelDB.db 和 Excel.zip 所在的目录: " ;;
                 "TABLE_FOLDER_ERR") echo "警告：该目录下未找到 ExcelDB.db 或 Excel.zip！" ;;
@@ -71,21 +72,21 @@ get_text() {
                 "IS_FULL_VERSION") echo "是否包含小版本号? (y/n): " ;;
                 "VERSION_KEY_PROMPT") echo "请选择特定版本号 Key (TableVersion/MediaVersion/PatchVersion/ResourceVersion): " ;;
                 "FLATDATA_BRANCH_PROMPT") echo "请选择 FlatData 分支区域 (CN/GL/JP): " ;;
-                "DEP_OPT_1") echo "检查/同步 Git 子模块 (crcmanip, PyCriCodecs)" ;;
+                "DEP_OPT_1") echo "同步 Git 子模块 (crcmanip, PyCriCodecs)" ;;
                 "DEP_OPT_2") echo "检查并安装 requirements.txt 缺失的 pip 库" ;;
-                "DEP_OPT_3") echo "安装配置 sqlcipher" ;;
+                "DEP_OPT_3") echo "安装 sqlcipher" ;;
                 "DEP_OPT_4") echo "克隆 BAJpApkSrc" ;;
                 "DEP_OPT_5") echo "克隆 BA-FlatData" ;;
                 "DEP_OPT_ALL") echo "一键安装所有依赖" ;;
                 "SUBMODULE_START") echo "开始检查并同步 Git 子模块..." ;;
                 "SUBMODULE_DONE") echo "子模块处理完毕。" ;;
-                "REQ_START") echo "开始分析并补全 requirements.txt 依赖..." ;;
+                "REQ_START") echo "开始分析并安装 requirements.txt 依赖..." ;;
                 "REQ_MISSING") echo "正在为您单独安装缺失的库: %s" ;;
                 "REQ_ALL_INSTALLED") echo "requirements.txt 中的所有库均已安装。" ;;
                 "REQ_NOT_FOUND") echo "未找到 requirements.txt 文件！" ;;
-                "SQLCIPHER_START") echo "开始配置 sqlcipher 编译环境..." ;;
+                "SQLCIPHER_START") echo "开始安装 sqlcipher 编译环境..." ;;
                 "SQLCIPHER_PIP") echo "正在安装 pysqlcipher3..." ;;
-                "SQLCIPHER_DONE") echo "sqlcipher 组件配置完成。" ;;
+                "SQLCIPHER_DONE") echo "sqlcipher 组件安装完成。" ;;
                 "FLATDATA_START") echo "正在克隆 BA-FlatData 仓库的 %s 分支..." ;;
                 "FLATDATA_DONE") echo "FlatData 克隆完毕。" ;;
             esac
@@ -105,17 +106,19 @@ get_text() {
                 "PACK_APK") echo "Pack APK" ;;
                 "PROCESS_EXCEL") echo "Process ExcelDB.db & Excel.zip" ;;
                 "SDK_PROMPT") echo "Enter SDKURL (leave empty to skip): " ;;
-                "CFG_PROMPT") echo "Modify GameMainConfig? (y/n): " ;;
-                "FIELDS_PROMPT") echo "Enter field names (separated by commas): " ;;
-                "VALUE_PROMPT") echo "Enter value for %s: " ;;
-                "COEXIST_PROMPT") echo "Use coexistence package? (y/n): " ;;
+                "CFG_PROMPT") echo "Enter GameMainConfig (leave empty to skip): " ;;
+                "COEXIST_PROMPT") echo "Enter custom package name (leave empty to skip): " ;;
+                "LOGIN_PROMPT") echo "Enter login interface language (leave empty to skip): " ;;
+                "REPLACE_PROMPT") echo "Replace resources? (y/n): " ;;
+                "BUNDLE_PROMPT") echo "Modify Bundle resources? (y/n): " ;;
+                "REPO_PROMPT") echo "Enter resource folder path (leave empty for default BAJpApkSrc): " ;;
                 "TRUST_PROMPT") echo "Trust CA certificate? (y/n): " ;;
-                "LOGIN_PROMPT") echo "Change login text to Chinese? (y/n): " ;;
                 "CLONING") echo "Cloning from GitHub..." ;;
                 "RUNNING_CMD") echo "Executing command: %s" ;;
                 "DONE_RETURN") echo "Press any key to return..." ;;
                 "INVALID_INPUT") echo "Invalid input, please try again." ;;
                 "SERVER_PROMPT") echo "Select server (CN/JP/GL): " ;;
+                "SERVER_PROMPT_APK") echo "Select server (JP/GL): " ;;
                 "MODE_PROMPT") echo "Select mode (Extract / Repack): " ;;
                 "TABLE_FOLDER_PROMPT") echo "Enter directory of ExcelDB.db and Excel.zip: " ;;
                 "TABLE_FOLDER_ERR") echo "Warning: ExcelDB.db or Excel.zip not found in this directory!" ;;
@@ -156,72 +159,6 @@ get_text() {
                 "FLATDATA_DONE") echo "FlatData cloning completed." ;;
             esac
             ;;
-        "JP")
-            case $key in
-                "TITLE") echo "メイン制御スクリプト" ;;
-                "CHECKING") echo "環境をチェック中..." ;;
-                "MISSING") echo "以下の依存関係が不足しています:" ;;
-                "INSTALLING") echo "インストールを処理中、しばらくお待ちください..." ;;
-                "EXIT") echo "スクリプトを終了" ;;
-                "BACK") echo "前のメニューに戻る" ;;
-                "SUB_MAIN") echo "メイン機能メニュー" ;;
-                "ASSIST") echo "補助機能メニュー" ;;
-                "DEP_MENU") echo "依存関係インストールメニュー" ;;
-                "LANG_SET") echo "言語設定 / Language Settings" ;;
-                "PACK_APK") echo "APK をビルド" ;;
-                "PROCESS_EXCEL") echo "ExcelDB.db と Excel.zip の処理" ;;
-                "SDK_PROMPT") echo "SDKURL を入力 (スキップする場合は空欄): " ;;
-                "CFG_PROMPT") echo "GameMainConfig を変更しますか？ (y/n): " ;;
-                "FIELDS_PROMPT") echo "フィールド名を入力してください (カンマ区切り): " ;;
-                "VALUE_PROMPT") echo "%s の値を入力してください: " ;;
-                "COEXIST_PROMPT") echo "共存パッケージを使用しますか？ (y/n): " ;;
-                "TRUST_PROMPT") echo "CA証明書を信頼しますか？ (y/n): " ;;
-                "LOGIN_PROMPT") echo "ログインテキストを中国語に変更しますか？ (y/n): " ;;
-                "CLONING") echo "GitHub からクローン中..." ;;
-                "RUNNING_CMD") echo "コマンドを実行中: %s" ;;
-                "DONE_RETURN") echo "任意のキーを押して戻る..." ;;
-                "INVALID_INPUT") echo "入力が無効です。再入力してください。" ;;
-                "SERVER_PROMPT") echo "サーバーを選択してください (CN/JP/GL): " ;;
-                "MODE_PROMPT") echo "モードを選択してください (Extract / Repack): " ;;
-                "TABLE_FOLDER_PROMPT") echo "ExcelDB.db と Excel.zip があるディレクトリを入力してください: " ;;
-                "TABLE_FOLDER_ERR") echo "警告：このディレクトリに ExcelDB.db または Excel.zip が見つかりません！" ;;
-                "OUT_JSON_PROMPT") echo "出力先 JSON ディレクトリを入力してください: " ;;
-                "IN_JSON_PROMPT") echo "パックする JSON ディレクトリを入力してください (内に Excel/ExcelDB フォルダが必要): " ;;
-                "IN_JSON_ERR") echo "警告：対象ディレクトリには 'Excel' または 'ExcelDB' サブフォルダが含まれている必要があります！" ;;
-                "DB_KEY_PROMPT") echo "DB キーを入力してください (不要な場合は空欄): " ;;
-                "CATALOG_PROMPT") echo "TableCatalog を変更しますか？ (y/n): " ;;
-                "NAME_PROMPT") echo "ファイル名を難読化しますか？ (y/n): " ;;
-                "PY_NOT_FOUND") echo "Python が検出されませんでした。自動インストールを試みます..." ;;
-                "SCRIPT_NOT_FOUND") echo "エラー: スクリプト %s が見つかりません！" ;;
-                "GET_CATALOG") echo "Catalog を取得" ;;
-                "GET_FILES") echo "ファイルをダウンロード" ;;
-                "GET_VERSION") echo "現在のバージョンを取得" ;;
-                "UPDATE_ENV") echo "env 設定を更新" ;;
-                "TYPE_PROMPT") echo "リソースタイプを選択 (Table/Media/Bundle): " ;;
-                "CLIENT_PROMPT") echo "クライアントプラットフォームを選択 (Android/iOS/Windows): " ;;
-                "FILES_PROMPT") echo "ダウンロードするファイル名の一覧を入力 (カンマ区切り、例: ExcelDB.db,Excel.zip): " ;;
-                "IS_FULL_VERSION") echo "マイナーバージョン番号を含めますか？ (y/n): " ;;
-                "VERSION_KEY_PROMPT") echo "特定のバージョン キーを選択 (TableVersion/MediaVersion/PatchVersion/ResourceVersion): " ;;
-                "FLATDATA_BRANCH_PROMPT") echo "FlatData のブランチ地域を選択 (CN/GL/JP): " ;;
-                "DEP_OPT_1") echo "Gitサブモジュールのチェック/同期 (crcmanip, PyCriCodecs)" ;;
-                "DEP_OPT_2") echo "requirements.txtの不足しているpipライブラリのチェックとインストール" ;;
-                "DEP_OPT_3") echo "sqlcipher環境のインストールと設定" ;;
-                "DEP_OPT_4") echo "BAJpApkSrcのクローン" ;;
-                "DEP_OPT_5") echo "BA-FlatDataのクローン" ;;
-                "DEP_OPT_ALL") echo "すべての依存関係を一括インストール" ;;
-                "SUBMODULE_START") echo "Git サブモジュールのチェックと同期を開始します..." ;;
-                "SUBMODULE_DONE") echo "サブモジュールの処理が完了しました。" ;;
-                "REQ_START") echo "requirements.txt の不足している依存関係の分析とインストールを開始します..." ;;
-                "REQ_MISSING") echo "不足しているライブラリを個別にインストールしています: %s" ;;
-                "REQ_ALL_INSTALLED") echo "requirements.txt 内のすべてのライブラリはすでにインストールされています。" ;;
-                "REQ_NOT_FOUND") echo "requirements.txt ファイルが見つかりません！" ;;
-                "SQLCIPHER_START") echo "sqlcipher のビルド環境の設定を開始します..." ;;
-                "SQLCIPHER_PIP") echo "pysqlcipher3 をインストールしています..." ;;
-                "SQLCIPHER_DONE") echo "sqlcipher コンポーネントの設定が完了しました。" ;;
-                "FLATDATA_START") echo "BA-FlatData リポジトリの %s ブランチをクローンしています..." ;;
-                "FLATDATA_DONE") echo "FlatData のクローンが完了しました。" ;;
-            esac
-            ;;
         "VN")
             case $key in
                 "TITLE") echo "Kịch Bản Điều Khiển Chính" ;;
@@ -236,18 +173,20 @@ get_text() {
                 "LANG_SET") echo "Cài Đặt Ngôn Ngữ" ;;
                 "PACK_APK") echo "Đóng Gói APK" ;;
                 "PROCESS_EXCEL") echo "Xử Lý ExcelDB.db Và Excel.zip" ;;
-                "SDK_PROMPT") echo "Nhập SDKURL (Để trống để bỏ qua): " ;;
-                "CFG_PROMPT") echo "Sửa đổi GameMainConfig? (y/n): " ;;
-                "FIELDS_PROMPT") echo "Nhập tên các trường (phân tách bằng dấu phẩy): " ;;
-                "VALUE_PROMPT") echo "Nhập giá trị cho %s: " ;;
-                "COEXIST_PROMPT") echo "Sử dụng gói chạy song song? (y/n): " ;;
+                "SDK_PROMPT") echo "Nhập SDKURL (để trống để bỏ qua): " ;;
+                "CFG_PROMPT") echo "Nhập GameMainConfig (để trống để bỏ qua): " ;;
+                "COEXIST_PROMPT") echo "Nhập tên gói tùy chỉnh (để trống để bỏ qua): " ;;
+                "LOGIN_PROMPT") echo "Nhập ngôn ngữ giao diện đăng nhập (để trống để bỏ qua): " ;;
+                "REPLACE_PROMPT") echo "Thay thế tài nguyên? (y/n): " ;;
+                "BUNDLE_PROMPT") echo "Sửa đổi tài nguyên Bundle? (y/n): " ;;
+                "REPO_PROMPT") echo "Nhập đường dẫn thư mục tài nguyên (để trống cho mặc định BAJpApkSrc): " ;;
                 "TRUST_PROMPT") echo "Tin tưởng chứng chỉ CA? (y/n): " ;;
-                "LOGIN_PROMPT") echo "Đổi văn bản đăng nhập thành tiếng Trung? (y/n): " ;;
                 "CLONING") echo "Đang sao chép từ GitHub..." ;;
                 "RUNNING_CMD") echo "Thực thi lệnh: %s" ;;
                 "DONE_RETURN") echo "Nhấn phím bất kỳ để quay lại..." ;;
                 "INVALID_INPUT") echo "Dữ liệu nhập không hợp lệ, vui lòng thử lại." ;;
                 "SERVER_PROMPT") echo "Vui lòng chọn máy chủ (CN/JP/GL): " ;;
+                "SERVER_PROMPT_APK") echo "Vui lòng chọn máy chủ (JP/GL): " ;;
                 "MODE_PROMPT") echo "Vui lòng chọn chế độ (Extract / Repack): " ;;
                 "TABLE_FOLDER_PROMPT") echo "Nhập thư mục chứa ExcelDB.db và Excel.zip: " ;;
                 "TABLE_FOLDER_ERR") echo "Cảnh báo: Không tìm thấy ExcelDB.db hoặc Excel.zip trong thư mục này!" ;;
@@ -353,35 +292,31 @@ func_pack_apk() {
     func_check_src_folder || return 1
     
     echo -e "\n${C_ACCENT}─── $(get_text PACK_APK) ───${C_DEF}"
+    
+    local target_server=$(get_valid_input "$(get_text SERVER_PROMPT_APK)" "^([Jj][Pp]|[Gg][Ll])$")
+    local server="${target_server^^}"
+    
     print_input "$(get_text SDK_PROMPT)"; read -r sdk_url
+    print_input "$(get_text CFG_PROMPT)"; read -r gamemainconfig
+    print_input "$(get_text COEXIST_PROMPT)"; read -r coexist
+    print_input "$(get_text LOGIN_PROMPT)"; read -r modifylogin
     
-    local mod_cfg=$(get_valid_input "$(get_text CFG_PROMPT)" "^[YyNn]$")
-    local json_str="{}"
+    local replace_res=$(get_valid_input "$(get_text REPLACE_PROMPT)" "^[YyNn]$")
+    local mod_bundle=$(get_valid_input "$(get_text BUNDLE_PROMPT)" "^[YyNn]$")
     
-    if [[ "$mod_cfg" =~ [Yy] ]]; then
-        print_input "$(get_text FIELDS_PROMPT)"; read -r fields
-        IFS=',' read -ra ADDR <<< "$fields"
-        json_str="{"
-        for i in "${!ADDR[@]}"; do
-            field=$(echo "${ADDR[$i]}" | xargs)
-            printf "${C_WARN}[?]${C_DEF} $(get_text VALUE_PROMPT)" "$field"
-            read -r val
-            json_str+="\"$field\": \"$val\""
-            [[ $i -lt $((${#ADDR[@]} - 1)) ]] && json_str+=", "
-        done
-        json_str+="}"
-    fi
-
-    local use_coexist=$(get_valid_input "$(get_text COEXIST_PROMPT)" "^[YyNn]$")
+    print_input "$(get_text REPO_PROMPT)"; read -r repo_path
+    
     local use_trust=$(get_valid_input "$(get_text TRUST_PROMPT)" "^[YyNn]$")
-    local mod_login=$(get_valid_input "$(get_text LOGIN_PROMPT)" "^[YyNn]$")
 
-    local cmd="python -m update.update_apk"
-    [[ -n "$sdk_url" ]] && cmd+=" --sdkurl $sdk_url"
-    [[ "$mod_cfg" =~ [Yy] ]] && cmd+=" --gamemainconfig '$json_str'"
-    [[ "$use_coexist" =~ [Yy] ]] && cmd+=" --coexist"
+    local cmd="python -m update.update_apk --server $server"
+    [[ -n "$sdk_url" ]] && cmd+=" --sdkurl '$sdk_url'"
+    [[ -n "$gamemainconfig" ]] && cmd+=" --gamemainconfig '$gamemainconfig'"
+    [[ -n "$coexist" ]] && cmd+=" --coexist '$coexist'"
+    [[ -n "$modifylogin" ]] && cmd+=" --modifylogin '$modifylogin'"
+    [[ "$replace_res" =~ [Yy] ]] && cmd+=" --replace"
+    [[ "$mod_bundle" =~ [Yy] ]] && cmd+=" --modifybundle"
+    [[ -n "$repo_path" ]] && cmd+=" --repo '$repo_path'"
     [[ "$use_trust" =~ [Yy] ]] && cmd+=" --trustcert"
-    [[ "$mod_login" =~ [Yy] ]] && cmd+=" --modifylogin"
 
     echo ""
     printf "${C_OK}[✓]${C_DEF} $(get_text RUNNING_CMD)\n" "${C_TITLE}$cmd${C_DEF}"
@@ -619,18 +554,16 @@ func_set_language() {
     draw_header "$(get_text LANG_SET)"
     draw_option 1 "简体中文"
     draw_option 2 "English"
-    draw_option 3 "日本語"
-    draw_option 4 "Tiếng Việt"
+    draw_option 3 "Tiếng Việt"
     draw_option 0 "$(get_text BACK)"
     draw_footer
     
     local lang_choice
-    lang_choice=$(get_valid_input "" "^[01234]$")
+    lang_choice=$(get_valid_input "" "^[0123]$")
     case $lang_choice in
         1) LANG_TYPE="CN" ;;
         2) LANG_TYPE="EN" ;;
-        3) LANG_TYPE="JP" ;;
-        4) LANG_TYPE="VN" ;;
+        3) LANG_TYPE="VN" ;;
         0) break ;;
     esac
     echo "$LANG_TYPE" > "$CONFIG_FILE"
