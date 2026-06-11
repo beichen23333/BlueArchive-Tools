@@ -22,7 +22,7 @@ voice_json_path = "other/Voice.json"
 # 初始化
 if not os.path.exists(voice_json_path):
     with open(voice_json_path, "w", encoding="utf-8") as f:
-        json.dump({}, f)
+        json.dump({"CN": {}}, f)
 
 def process(files_info):
     downloaded_paths = []
@@ -67,7 +67,9 @@ def process(files_info):
                         # 生成Voice.json，用于校验文件完整性并保存zip crc size
                         with open(voice_json_path, "r+", encoding="utf-8") as f:
                             v_data = json.load(f)
-                            v_data[group_key] = {
+                            if "CN" not in v_data:
+                                v_data["CN"] = {}
+                            v_data["CN"][group_key] = {
                                 "acb_hash": hashes.get("acb"),
                                 "awb_hash": hashes.get("awb"),
                                 "zip_name": zip_name,
@@ -104,7 +106,7 @@ if __name__ == "__main__":
             groups = {}
 
             with open(voice_json_path, "r", encoding="utf-8") as f:
-                existing_records = json.load(f)
+                existing_records = json.load(f).get("CN", {})
 
             for path, info in data.items():
                 if "voc_cn" in path and info["MediaType"] in ["acb", "awb"]:

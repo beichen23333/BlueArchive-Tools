@@ -35,6 +35,7 @@ jobs:
       - name: Install requirements
         run: |
           pip install -r requirements.txt
+          sudo apt install ffmpeg
 
       - name: Login
         run: |
@@ -43,9 +44,8 @@ jobs:
 
       - name: Prepare Voice
         run: |
-          git clone --filter=blob:none --no-checkout git@github.com:beichen23333/BA-VoiceCN.git Voice
+          git clone git@github.com:beichen23333/BA-Voice.git Voice
           cd Voice
-          git sparse-checkout init --cone
 
       - name: Run Extractor
         run: |
